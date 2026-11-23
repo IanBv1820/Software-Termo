@@ -8,6 +8,10 @@ Una alternativa moderna, web y de código abierto a EES (Engineering Equation So
 - **Tablas paramétricas y gráficas**, con exportación a CSV y PNG.
 - Funciona en el navegador sin servidor: los cálculos corren en un Web Worker, así que la página nunca se congela.
 
+## Úsalo en línea
+
+https://ianbv1820.github.io/Software-Termo/ (se publica solo con cada cambio en `main`).
+
 ## Ejemplo
 
 ```
