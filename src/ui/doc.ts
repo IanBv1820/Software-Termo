@@ -1,3 +1,4 @@
+import { translateSource, type Lang } from '../engine';
 import { EXAMPLES } from './examples';
 
 export interface TableCol {
@@ -19,12 +20,12 @@ export interface Doc {
   plot: { x: string; y: string[] };
 }
 
-export function docFromExample(id: string): Doc {
+export function docFromExample(id: string, lang: Lang = 'es'): Doc {
   const ex = EXAMPLES.find((e) => e.id === id) ?? EXAMPLES[0];
   return {
     version: 1,
     title: ex.title,
-    src: ex.src,
+    src: translateSource(ex.src, lang),
     units: {},
     guesses: {},
     lower: {},
@@ -61,4 +62,9 @@ export function parseDocFile(text: string): Doc {
   const d = JSON.parse(text);
   if (!d || d.version !== 1 || typeof d.src !== 'string') throw new Error('El archivo no es un proyecto válido');
   return { ...docFromExample('rankine'), ...d };
+}
+
+/** True if the text is one of the examples, unedited, in either language. */
+export function isExampleSrc(src: string): boolean {
+  return EXAMPLES.some((e) => translateSource(e.src, 'es') === src || translateSource(e.src, 'en') === src);
 }

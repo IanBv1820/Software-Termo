@@ -1,17 +1,44 @@
 import { D, dimEq, displayChoices, fromSI, parseUnit, toSI, type Dim } from '../engine';
 
-const PREFERRED: Array<[Dim, string]> = [
-  [D.temperature, 'C'],
-  [D.pressure, 'kPa'],
-  [D.specEnergy, 'kJ/kg'],
-  [D.specEntropy, 'kJ/kg-K'],
-  [D.power, 'kW'],
-  [D.energy, 'kJ'],
-];
+export type UnitSystem = 'metric' | 'si' | 'english';
 
-export function defaultUnit(dim: Dim | null): string {
+const PREFERRED: Record<UnitSystem, Array<[Dim, string]>> = {
+  metric: [
+    [D.temperature, 'C'],
+    [D.pressure, 'kPa'],
+    [D.specEnergy, 'kJ/kg'],
+    [D.specEntropy, 'kJ/kg-K'],
+    [D.power, 'kW'],
+    [D.energy, 'kJ'],
+  ],
+  si: [],
+  english: [
+    [D.temperature, 'F'],
+    [D.pressure, 'psi'],
+    [D.specEnergy, 'Btu/lbm'],
+    [D.specEntropy, 'Btu/lbm-R'],
+    [D.power, 'hp'],
+    [D.energy, 'Btu'],
+    [D.massFlow, 'lbm/s'],
+    [D.density, 'lbm/ft^3'],
+    [D.specVolume, 'ft^3/lbm'],
+    [D.length, 'ft'],
+    [D.area, 'ft^2'],
+    [D.volume, 'ft^3'],
+    [D.mass, 'lbm'],
+    [D.velocity, 'ft/s'],
+    [D.force, 'lbf'],
+  ],
+};
+
+let system: UnitSystem = 'metric';
+export function setUnitSystem(s: UnitSystem) {
+  system = s;
+}
+
+export function defaultUnit(dim: Dim | null, sys: UnitSystem = system): string {
   if (!dim) return '';
-  for (const [d, u] of PREFERRED) if (dimEq(d, dim)) return u;
+  for (const [d, u] of PREFERRED[sys]) if (dimEq(d, dim)) return u;
   return displayChoices(dim)[0];
 }
 

@@ -1,6 +1,7 @@
-import { FLUID_LIST, HA_FUNCS, PROP_FUNCS } from '../engine';
+import { FLUID_LIST, HA_FUNCS, PROP_FUNCS, fluidLabel, funcName, translateSource, type Lang } from '../engine';
 
-export function Help() {
+export function Help({ lang }: { lang: Lang }) {
+  const tr = (code: string) => translateSource(code, lang);
   return (
     <div className="help">
       <section className="card">
@@ -11,7 +12,7 @@ export function Help() {
             <code>P1 = 200 [kPa]</code>.
           </li>
           <li>
-            Pide propiedades con el nombre de la propiedad, el fluido y dos datos del estado: <code>h1 = enthalpy(Water, T=T1, P=P1)</code>.
+            Pide propiedades con el nombre de la propiedad, el fluido y dos datos del estado: <code>{tr('h1 = enthalpy(Water, T=T1, P=P1)')}</code>. Si no sabes por dónde empezar, abre el <b>Asistente</b> (arriba).
           </li>
           <li>
             Pulsa <b>Resolver</b> (<kbd>Ctrl</kbd>+<kbd>Enter</kbd>). Si falta o sobra una ecuación, o algo no cuadra en unidades, aparece un aviso debajo del editor;
@@ -65,17 +66,17 @@ export function Help() {
           <code>u</code>, <code>v</code>, <code>x</code> (calidad), <code>d</code> (densidad).
         </p>
         <pre>
-          {`h1 = enthalpy(Water, T=T1, P=P1)
+          {tr(`h1 = enthalpy(Water, T=T1, P=P1)
 s2 = entropy(R134a, P=P2, x=1)
 T3 = temperature(Air, h=h3, P=P3)
-P_s = P_sat(Water, T=100 [C])`}
+P_s = P_sat(Water, T=100 [C])`)}
         </pre>
         <table className="grid compact">
           <tbody>
             {Object.entries(PROP_FUNCS).map(([k, f]) => (
               <tr key={k}>
                 <td>
-                  <code>{k}</code>
+                  <code>{funcName(k, lang)}</code>
                 </td>
                 <td>{f.desc}</td>
               </tr>
@@ -83,23 +84,23 @@ P_s = P_sat(Water, T=100 [C])`}
           </tbody>
         </table>
         <p>
-          <b>Fluidos:</b> {FLUID_LIST.join(', ')} y cualquier otro fluido de CoolProp por su nombre.
+          <b>Fluidos:</b> {FLUID_LIST.map((f) => fluidLabel(f, lang)).join(', ')} y cualquier otro fluido de CoolProp por su nombre en inglés. Las funciones y fluidos se pueden escribir en español o en inglés; elige cuál prefieres en Preferencias.
         </p>
       </section>
 
       <section className="card">
         <h3>Aire húmedo (psicrometría)</h3>
         <p>
-          Usa el fluido <code>AirH2O</code> con tres entradas entre <code>T</code>, <code>P</code>, <code>R</code> (humedad relativa 0–1), <code>w</code> (relación de
+          Usa el fluido <code>{fluidLabel('AirH2O', lang)}</code> con tres entradas entre <code>T</code>, <code>P</code>, <code>R</code> o <code>HR</code> (humedad relativa 0–1), <code>w</code> (relación de
           humedad), <code>B</code> (bulbo húmedo), <code>D</code> (punto de rocío), <code>h</code>.
         </p>
-        <pre>{`w = HumRat(AirH2O, T=30 [C], P=1 [atm], R=0.6)`}</pre>
+        <pre>{tr(`w = HumRat(AirH2O, T=30 [C], P=1 [atm], R=0.6)`)}</pre>
         <table className="grid compact">
           <tbody>
             {Object.entries(HA_FUNCS).map(([k, f]) => (
               <tr key={k}>
                 <td>
-                  <code>{k}</code>
+                  <code>{funcName(k, lang)}</code>
                 </td>
                 <td>{f.desc}</td>
               </tr>
@@ -111,7 +112,7 @@ P_s = P_sat(Water, T=100 [C])`}
       <section className="card">
         <h3>Funciones matemáticas</h3>
         <p>
-          <code>sqrt exp ln log10 sin cos tan asin acos atan sinh cosh tanh abs min max</code> y la constante <code>pi</code>. Los ángulos van en radianes; escribe{' '}
+          <code>{lang === 'es' ? 'raiz exp ln log10 sen cos tan asen acos atan senh cosh tanh abs min max' : 'sqrt exp ln log10 sin cos tan asin acos atan sinh cosh tanh abs min max'}</code> y la constante <code>pi</code>. Los ángulos van en radianes; escribe{' '}
           <code>30 [deg]</code> para grados.
         </p>
       </section>
