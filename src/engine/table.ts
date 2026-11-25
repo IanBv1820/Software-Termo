@@ -10,7 +10,7 @@ export interface TableInput {
 
 export interface TableRow {
   ok: boolean;
-  values: Record<string, number>; // lower-case var name -> SI value
+  values: Record<string, number>; // var name (case-sensitive) -> SI value
   error?: string;
 }
 
@@ -22,7 +22,7 @@ export function linspace(a: number, b: number, n: number): number[] {
 export function runTable(model: Model, inputs: TableInput[], opts: Omit<SolveOptions, 'fixed'> = {}, onRow?: (i: number, row: TableRow) => void): TableRow[] {
   const nRows = Math.max(0, ...inputs.map((c) => c.values.length));
   const idx = inputs.map((c) => {
-    const i = model.index.get(c.name.toLowerCase());
+    const i = model.index.get(c.name);
     if (i === undefined) throw new Error(`La variable "${c.name}" no aparece en las ecuaciones`);
     return i;
   });
@@ -36,7 +36,7 @@ export function runTable(model: Model, inputs: TableInput[], opts: Omit<SolveOpt
     });
     const res = solve(model, { ...opts, guesses, fixed });
     const values: Record<string, number> = {};
-    model.vars.forEach((v, i) => (values[v.name.toLowerCase()] = res.ok || fixed.has(i) ? res.values[i] : NaN));
+    model.vars.forEach((v, i) => (values[v.name] = res.ok || fixed.has(i) ? res.values[i] : NaN));
     const row: TableRow = { ok: res.ok, values };
     if (!res.ok) row.error = res.diagnostics.filter((d) => d.severity === 'error').map((d) => d.message).join(' ');
     else {

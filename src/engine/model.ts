@@ -45,7 +45,7 @@ export interface VarInfo {
 export interface Model {
   eqs: ModelEq[];
   vars: VarInfo[];
-  index: Map<string, number>; // lower-case name -> index
+  index: Map<string, number>; // exact name (case-sensitive) -> index
   diagnostics: Diagnostic[];
 }
 
@@ -99,7 +99,7 @@ export function buildModel(src: string, backend: PropsBackend | null): Model {
   const roleGuess = new Map<number, number>();
 
   const varIdx = (name: string): number => {
-    const k = name.toLowerCase();
+    const k = name;
     let i = index.get(k);
     if (i === undefined) {
       i = vars.length;
@@ -121,7 +121,7 @@ export function buildModel(src: string, backend: PropsBackend | null): Model {
         return () => NaN;
       case 'var': {
         const c = CONSTANTS[e.name.toLowerCase()];
-        if (c && !index.has(e.name.toLowerCase())) {
+        if (c && !index.has(e.name)) {
           const v = c.value;
           return () => v;
         }
@@ -279,9 +279,9 @@ export function buildModel(src: string, backend: PropsBackend | null): Model {
       [eq.rhs, eq.lhs, lhs],
     ];
     for (const [side, other, otherFn] of sides) {
-      if (side.kind === 'var' && index.has(side.name.toLowerCase())) {
-        const v = index.get(side.name.toLowerCase())!;
-        if (!containsVar(other, side.name.toLowerCase())) explicit.push({ v, expr: otherFn });
+      if (side.kind === 'var' && index.has(side.name)) {
+        const v = index.get(side.name)!;
+        if (!containsVar(other, side.name)) explicit.push({ v, expr: otherFn });
         if (!hasAnyVar(other)) me.fixes = v;
       }
     }
@@ -310,7 +310,7 @@ const ROLE_GUESS: Record<string, number> = { t: 300, p: 1e5, x: 0.5, q: 0.5, r: 
 function containsVar(e: Expr, lname: string): boolean {
   switch (e.kind) {
     case 'var':
-      return e.name.toLowerCase() === lname;
+      return e.name === lname;
     case 'neg':
       return containsVar(e.arg, lname);
     case 'bin':
@@ -420,7 +420,7 @@ function checkUnits(model: Model) {
       case 'str':
         return linConst(DIMLESS);
       case 'var': {
-        const i = model.index.get(e.name.toLowerCase());
+        const i = model.index.get(e.name);
         if (i === undefined) return linConst(CONSTANTS[e.name.toLowerCase()]?.dim ?? DIMLESS);
         return linUnknown(i);
       }

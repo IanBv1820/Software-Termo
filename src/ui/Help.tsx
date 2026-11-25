@@ -32,7 +32,7 @@ export function Help({ lang }: { lang: Lang }) {
         <ul>
           <li>Una ecuación por línea (o varias separadas por <code>;</code>), <b>en cualquier orden</b>. El programa decide qué resolver primero.</li>
           <li>
-            Operadores: <code>+ - * / ^</code> y paréntesis. Los nombres de variables no distinguen mayúsculas: <code>T1</code> y <code>t1</code> son la misma.
+            Operadores: <code>+ - * / ^</code> y paréntesis. Los nombres de variables distinguen mayúsculas de minúsculas: <code>T</code> y <code>t</code> son variables distintas. Los nombres de funciones y fluidos se aceptan de cualquier forma (<code>Enthalpy</code> o <code>enthalpy</code>).
           </li>
           <li>
             Comentarios: <code>"entre comillas"</code>, <code>{'{entre llaves}'}</code>, o después de <code>//</code>.
