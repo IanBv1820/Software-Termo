@@ -18,7 +18,7 @@
   --warn-soft: #fff5db;
   --err: #c62828;
   --err-soft: #fdecec;
-  --active-line: #f3f6fc;
+  --active-line: rgba(30, 80, 200, 0.055);
   --selection: #cfe0ff;
 
   --syn-comment: #7b8699;
@@ -57,8 +57,8 @@
     --warn-soft: #2d2615;
     --err: #ff6b6b;
     --err-soft: #331a1c;
-    --active-line: #1c222c;
-    --selection: #2a3d66;
+    --active-line: rgba(120, 160, 255, 0.05);
+    --selection: #34518c;
     --syn-comment: #7d8696;
     --syn-number: #5ccfc6;
     --syn-unit: #f0a35e;
@@ -90,8 +90,8 @@
   --warn-soft: #2d2615;
   --err: #ff6b6b;
   --err-soft: #331a1c;
-  --active-line: #1c222c;
-  --selection: #2a3d66;
+  --active-line: rgba(120, 160, 255, 0.05);
+  --selection: #34518c;
   --syn-comment: #7d8696;
   --syn-number: #5ccfc6;
   --syn-unit: #f0a35e;
