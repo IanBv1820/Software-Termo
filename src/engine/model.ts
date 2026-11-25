@@ -11,6 +11,8 @@ import {
   PROP_FUNCS,
   PropertyError,
   type PropsBackend,
+  canonFunc,
+  canonInput,
 } from './properties';
 import { D, DIMLESS, dimEq, isDimless, siString, type Dim } from './units';
 
@@ -155,7 +157,7 @@ export function buildModel(src: string, backend: PropsBackend | null): Model {
   }
 
   function compileCall(e: Extract<Expr, { kind: 'call' }>, used: Set<number>, eqI: number): Fn {
-    const name = e.name.toLowerCase();
+    const name = canonFunc(e.name);
     const b = BUILTINS[name];
     if (b) {
       if (e.args.some((a) => a.key)) {
@@ -219,7 +221,7 @@ export function buildModel(src: string, backend: PropsBackend | null): Model {
     const keys: string[] = [];
     const fns: Fn[] = [];
     for (const a of rest) {
-      const key = a.key?.toLowerCase();
+      const key = a.key ? canonInput(a.key, isHA) : undefined;
       if (!key || !(key in table)) {
         const valid = Object.keys(table).join(', ');
         errors.push({
@@ -334,7 +336,7 @@ function hasAnyVar(e: Expr): boolean {
   }
 }
 function isFluidArg(e: Extract<Expr, { kind: 'call' }>): boolean {
-  const n = e.name.toLowerCase();
+  const n = canonFunc(e.name);
   return n in PROP_FUNCS || n in HA_FUNCS;
 }
 
@@ -456,7 +458,7 @@ function checkUnits(model: Model) {
         return linConst(DIMLESS);
       }
       case 'call': {
-        const name = e.name.toLowerCase();
+        const name = canonFunc(e.name);
         const b = BUILTINS[name];
         if (b) {
           const args = e.args.map((a) => lin(a.value, b.dims === 'same', eq));
@@ -471,7 +473,7 @@ function checkUnits(model: Model) {
         const isHA = name in HA_FUNCS;
         const table = isHA ? HA_INPUTS : INPUTS;
         for (const a of e.args.slice(1)) {
-          const key = a.key!.toLowerCase();
+          const key = canonInput(a.key!, isHA);
           cons.push({
             left: lin(a.value, true, eq),
             right: linConst(table[key].dim),

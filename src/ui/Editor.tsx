@@ -6,14 +6,15 @@ import { StreamLanguage, HighlightStyle, syntaxHighlighting, type StringStream }
 import { tags as t } from '@lezer/highlight';
 import { setDiagnostics, lintGutter, type Diagnostic as CMDiag } from '@codemirror/lint';
 import { autocompletion, type CompletionContext } from '@codemirror/autocomplete';
-import { FLUID_LIST, HA_FUNCS, PROP_FUNCS, type Diagnostic } from '../engine';
+import { FLUID_ES, FLUID_LIST, FUNC_ES, HA_FUNCS, PROP_FUNCS, fluidLabel, funcName, type Diagnostic, type Lang } from '../engine';
 
 const FUNC_NAMES = new Set([
   ...Object.keys(PROP_FUNCS),
   ...Object.keys(HA_FUNCS),
+  ...Object.keys(FUNC_ES),
   'sqrt', 'exp', 'ln', 'log', 'log10', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh', 'abs', 'min', 'max',
 ]);
-const FLUIDS = new Set([...FLUID_LIST.map((f) => f.toLowerCase()), 'steam', 'airh2o']);
+const FLUIDS = new Set([...FLUID_LIST.map((f) => f.toLowerCase()), ...Object.keys(FLUID_ES), 'steam', 'airh2o']);
 
 type LexState = { inComment: '"' | '}' | null };
 function tok(stream: StringStream, state: LexState): string | null {
@@ -82,13 +83,17 @@ const theme = EditorView.theme({
   '.cm-cursor': { borderLeftColor: 'var(--accent)' },
 });
 
-const COMPLETIONS = [
-  ...Object.entries(PROP_FUNCS).map(([k, f]) => ({ label: k, type: 'function', detail: f.desc, apply: `${k}(` })),
-  ...Object.entries(HA_FUNCS).map(([k, f]) => ({ label: k, type: 'function', detail: f.desc, apply: `${k}(AirH2O, ` })),
-  ...['sqrt', 'exp', 'ln', 'log10', 'sin', 'cos', 'tan', 'abs', 'min', 'max'].map((k) => ({ label: k, type: 'function', apply: `${k}(` })),
-  ...FLUID_LIST.map((f) => ({ label: f, type: 'class', detail: 'fluido' })),
-  { label: 'AirH2O', type: 'class', detail: 'aire húmedo' },
-];
+function completions(lang: Lang) {
+  const math = lang === 'es' ? ['raiz', 'exp', 'ln', 'log10', 'sen', 'cos', 'tan', 'abs', 'min', 'max'] : ['sqrt', 'exp', 'ln', 'log10', 'sin', 'cos', 'tan', 'abs', 'min', 'max'];
+  const ha = fluidLabel('AirH2O', lang);
+  return [
+    ...Object.entries(PROP_FUNCS).map(([k, f]) => ({ label: funcName(k, lang), type: 'function', detail: f.desc, apply: `${funcName(k, lang)}(` })),
+    ...Object.entries(HA_FUNCS).map(([k, f]) => ({ label: funcName(k, lang), type: 'function', detail: f.desc, apply: `${funcName(k, lang)}(${ha}, ` })),
+    ...math.map((k) => ({ label: k, type: 'function', apply: `${k}(` })),
+    ...FLUID_LIST.map((f) => ({ label: fluidLabel(f, lang), type: 'class', detail: lang === 'es' ? 'fluido' : 'fluid' })),
+    { label: ha, type: 'class', detail: 'aire húmedo' },
+  ];
+}
 
 export interface EditorHandle {
   focusLine(line: number): void;
@@ -97,6 +102,7 @@ export interface EditorHandle {
 export function Editor(props: {
   value: string;
   onChange: (v: string) => void;
+  lang: Lang;
   onRun: () => void;
   diagnostics: Diagnostic[];
   variables: string[];
@@ -112,7 +118,7 @@ export function Editor(props: {
       const w = ctx.matchBefore(/[A-Za-z_][A-Za-z0-9_]*/);
       if (!w || (w.from === w.to && !ctx.explicit)) return null;
       const vars = cb.current.variables.map((v) => ({ label: v, type: 'variable' }));
-      return { from: w.from, options: [...COMPLETIONS, ...vars], validFor: /^[A-Za-z0-9_]*$/ };
+      return { from: w.from, options: [...completions(cb.current.lang), ...vars], validFor: /^[A-Za-z0-9_]*$/ };
     };
     const v = new EditorView({
       parent: host.current!,

@@ -186,3 +186,188 @@ function lastError(backend: PropsBackend): string {
     return '';
   }
 }
+
+// ---------------------------------------------------------------------------
+// Spanish names. Both languages are always accepted; the preference only
+// decides which names the editor suggests and the assistant writes.
+
+export type Lang = 'es' | 'en';
+
+/** Spanish function name -> canonical (English, lower-case) name */
+export const FUNC_ES: Record<string, string> = {
+  entalpia: 'enthalpy',
+  entropia: 'entropy',
+  energia_interna: 'intenergy',
+  densidad: 'density',
+  volumen: 'volume',
+  temperatura: 'temperature',
+  presion: 'pressure',
+  calidad: 'quality',
+  viscosidad: 'viscosity',
+  conductividad: 'conductivity',
+  vel_sonido: 'soundspeed',
+  t_sat: 't_sat',
+  p_sat: 'p_sat',
+  masa_molar: 'molarmass',
+  t_critica: 't_crit',
+  p_critica: 'p_crit',
+  relacion_humedad: 'humrat',
+  humedad_relativa: 'relhum',
+  bulbo_humedo: 'wetbulb',
+  punto_rocio: 'dewpoint',
+  entalpia_ha: 'enthalpy_ha',
+  raiz: 'sqrt',
+  sen: 'sin',
+  asen: 'asin',
+  senh: 'sinh',
+};
+const FUNC_EN_TO_ES: Record<string, string> = Object.fromEntries(
+  Object.entries(FUNC_ES)
+    .filter(([es, en]) => es !== en)
+    .map(([es, en]) => [en, es]),
+);
+
+const EN_PRETTY: Record<string, string> = {
+  enthalpy_ha: 'Enthalpy_HA',
+  t_sat: 'T_sat',
+  p_sat: 'P_sat',
+  t_crit: 'T_crit',
+  p_crit: 'P_crit',
+  humrat: 'HumRat',
+  relhum: 'RelHum',
+  wetbulb: 'WetBulb',
+  dewpoint: 'DewPoint',
+};
+
+export function canonFunc(name: string): string {
+  const n = name.toLowerCase();
+  return FUNC_ES[n] ?? n;
+}
+
+/** Name of a canonical function in the chosen language. */
+export function funcName(canon: string, lang: Lang): string {
+  if (lang === 'en') return EN_PRETTY[canon] ?? canon;
+  const es = FUNC_EN_TO_ES[canon] ?? canon;
+  return es === 't_sat' ? 'T_sat' : es === 'p_sat' ? 'P_sat' : es;
+}
+
+/** Spanish aliases for property inputs (HR = humedad relativa, BH = bulbo húmedo, PR = punto de rocío). */
+export function canonInput(key: string, humidAir: boolean): string {
+  const k = key.toLowerCase();
+  if (humidAir) return ({ hr: 'r', bh: 'b', pr: 'd' } as Record<string, string>)[k] ?? k;
+  return k;
+}
+
+/** Spanish fluid names. Values are the English display names used in FLUID_LIST. */
+export const FLUID_ES: Record<string, string> = {
+  agua: 'Water',
+  vapor: 'Water',
+  aire: 'Air',
+  amoniaco: 'Ammonia',
+  nitrogeno: 'Nitrogen',
+  oxigeno: 'Oxygen',
+  hidrogeno: 'Hydrogen',
+  metano: 'Methane',
+  propano: 'Propane',
+  isobutano: 'Isobutane',
+  helio: 'Helium',
+  argon: 'Argon',
+  aire_humedo: 'AirH2O',
+  airehumedo: 'AirH2O',
+};
+const FLUID_EN_TO_ES: Record<string, string> = {
+  water: 'Agua',
+  steam: 'Agua',
+  air: 'Aire',
+  ammonia: 'Amoniaco',
+  nitrogen: 'Nitrogeno',
+  oxygen: 'Oxigeno',
+  hydrogen: 'Hidrogeno',
+  methane: 'Metano',
+  propane: 'Propano',
+  isobutane: 'Isobutano',
+  helium: 'Helio',
+  argon: 'Argon',
+  airh2o: 'Aire_humedo',
+};
+
+/** Name of a fluid (given in English, e.g. 'Water') in the chosen language. */
+export function fluidLabel(en: string, lang: Lang): string {
+  if (lang === 'en') return en;
+  return FLUID_EN_TO_ES[en.toLowerCase()] ?? en;
+}
+
+for (const [es, en] of Object.entries(FLUID_ES)) {
+  if (en === 'AirH2O') HUMID_AIR_NAMES.add(es);
+  else FLUIDS[es] = FLUIDS[en.toLowerCase()] ?? en;
+}
+
+/**
+ * Rewrite the function and fluid names of a program into one language,
+ * leaving comments, units, numbers and variable names untouched.
+ */
+export function translateSource(src: string, lang: Lang): string {
+  let out = '';
+  let i = 0;
+  let afterPropParen = false; // next identifier is a fluid
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '"' || c === '{') {
+      const close = c === '"' ? '"' : '}';
+      const j = src.indexOf(close, i + 1);
+      const end = j < 0 ? src.length : j + 1;
+      out += src.slice(i, end);
+      i = end;
+      continue;
+    }
+    if ((c === '/' && src[i + 1] === '/') || c === '#') {
+      const j = src.indexOf('\n', i);
+      const end = j < 0 ? src.length : j;
+      out += src.slice(i, end);
+      i = end;
+      continue;
+    }
+    if (c === '[') {
+      const j = src.indexOf(']', i);
+      const end = j < 0 ? src.length : j + 1;
+      out += src.slice(i, end);
+      i = end;
+      continue;
+    }
+    const m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(src.slice(i));
+    if (m) {
+      const word = m[0];
+      const rest = src.slice(i + word.length);
+      const isCall = /^\s*\(/.test(rest);
+      let rep = word;
+      if (afterPropParen) {
+        const lw = word.toLowerCase();
+        const en = FLUID_ES[lw] ?? FLUID_LIST.find((f) => f.toLowerCase() === lw) ?? (lw === 'steam' ? 'Water' : lw === 'airh2o' ? 'AirH2O' : undefined);
+        if (en) rep = fluidLabel(en, lang);
+        afterPropParen = false;
+      } else if (isCall) {
+        const canon = canonFunc(word);
+        const known = canon in PROP_FUNCS || canon in HA_FUNCS || ['sqrt', 'sin', 'asin', 'sinh'].includes(canon);
+        if (known) {
+          rep = funcName(canon, lang);
+          if (canon in PROP_FUNCS || canon in HA_FUNCS) afterPropParen = true;
+        }
+      }
+      out += rep;
+      i += word.length;
+      if (afterPropParen && isCall) {
+        // copy the opening parenthesis and spaces so the next identifier is the fluid
+        const p = /^\s*\(\s*/.exec(src.slice(i));
+        if (p && isCall) {
+          out += p[0];
+          i += p[0].length;
+        }
+      }
+      continue;
+    }
+    afterPropParen = false;
+    out += c;
+    i++;
+  }
+  return out;
+}

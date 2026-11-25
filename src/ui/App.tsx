@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { linspace, type Diagnostic, type TableRow } from '../engine';
+import { linspace, translateSource, type Diagnostic, type TableRow } from '../engine';
 import type { Response, VarOut } from '../worker/protocol';
 import { Editor, type EditorHandle } from './Editor';
 import { Results } from './Results';
@@ -7,15 +7,23 @@ import { TablePanel } from './TablePanel';
 import { PlotPanel } from './PlotPanel';
 import { Help } from './Help';
 import { EXAMPLES } from './examples';
-import { docFromExample, loadDoc, parseDocFile, saveDoc, type Doc } from './doc';
-import { fmt, siToUnit, unitFor, unitToSi } from './format';
+import { docFromExample, isExampleSrc, loadDoc, parseDocFile, saveDoc, type Doc } from './doc';
+import { fmt, setUnitSystem, siToUnit, unitFor, unitToSi } from './format';
+import { SlideOver } from './SlideOver';
+import { Assistant, type InsertMode } from './Assistant';
+import { Preferences } from './Preferences';
+import { loadPrefs, savePrefs, type Prefs } from './prefs';
 import { useSolver } from './useSolver';
 
 type Tab = 'results' | 'table' | 'plot' | 'help';
 type Stats = Extract<Response, { type: 'solved' }>['stats'];
 
 export function App() {
-  const [doc, setDocState] = useState<Doc>(loadDoc);
+  const [doc, setDocState] = useState<Doc>(() => {
+    const d = loadDoc();
+    // an unedited example is shown in the language chosen in Preferences
+    return isExampleSrc(d.src) ? { ...d, src: translateSource(d.src, loadPrefs().lang) } : d;
+  });
   const setDoc = useCallback((f: (d: Doc) => Doc) => setDocState((d) => f(d)), []);
   const { ready, fatal, call, cancel } = useSolver();
   const [tab, setTab] = useState<Tab>('results');
@@ -27,13 +35,17 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [tableRows, setTableRows] = useState<(TableRow | null)[]>([]);
   const [tableRunning, setTableRunning] = useState(false);
-  const [theme, setTheme] = useState<string>(() => {
+  const [prefs, setPrefsState] = useState<Prefs>(loadPrefs);
+  setUnitSystem(prefs.units);
+  const theme = prefs.theme;
+  const [panel, setPanel] = useState<'assistant' | 'prefs' | null>(() => {
     try {
-      return localStorage.getItem('termo-solver:theme') ?? 'auto';
+      return localStorage.getItem('software-termo:doc') || localStorage.getItem('termo-solver:doc') ? null : 'assistant';
     } catch {
-      return 'auto';
+      return null;
     }
   });
+  const autoRun = useRef(false);
   const editorRef = useRef<EditorHandle | null>(null);
   const [pending, setPending] = useState<{ message: string; confirm: string; action: () => void } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -43,12 +55,13 @@ export function App() {
   useEffect(() => {
     if (theme === 'auto') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem('termo-solver:theme', theme);
-    } catch {
-      /* ignore */
-    }
   }, [theme]);
+  useEffect(() => savePrefs(prefs), [prefs]);
+
+  const changePrefs = (p: Prefs) => {
+    if (p.lang !== prefs.lang) setDoc((d) => ({ ...d, src: translateSource(d.src, p.lang) }));
+    setPrefsState(p);
+  };
 
   const solvedNow = solvedSrc === doc.src;
 
@@ -82,6 +95,15 @@ export function App() {
   const runRef = useRef(run);
   runRef.current = run;
 
+  // solve right after the assistant writes equations
+  useEffect(() => {
+    if (autoRun.current && ready) {
+      autoRun.current = false;
+      setTab('results');
+      runRef.current();
+    }
+  }, [doc.src, ready]);
+
   const runTable = useCallback(async () => {
     const cols = doc.table.columns;
     const byKey = new Map(vars.map((v) => [v.name.toLowerCase(), v]));
@@ -114,7 +136,7 @@ export function App() {
     download(`${slug(doc.title)}-tabla.csv`, [head.join(','), ...lines].join('\n'), 'text/csv');
   };
 
-  const isDirty = () => !!doc.src.trim() && !EXAMPLES.some((e) => e.src === doc.src);
+  const isDirty = () => !!doc.src.trim() && !isExampleSrc(doc.src);
   const openExample = (id: string) => {
     const ex = EXAMPLES.find((e) => e.id === id);
     if (isDirty() && !pending)
@@ -126,7 +148,7 @@ export function App() {
     loadExample(id);
   };
   const loadExample = (id: string) => {
-    setDocState(docFromExample(id));
+    setDocState(docFromExample(id, prefs.lang));
     setSolveDiags(null);
     setSolvedSrc(null);
     setTableRows([]);
@@ -148,6 +170,26 @@ export function App() {
     setSolvedSrc(null);
     setTableRows([]);
     setStats(null);
+  };
+  const insertFromAssistant = (src: string, title: string, mode: InsertMode) => {
+    setPanel(null);
+    if (mode === 'append') {
+      autoRun.current = true;
+      setDoc((d) => ({ ...d, src: `${d.src.trimEnd()}\n\n${src}` }));
+      return;
+    }
+    const apply = () => {
+      clearDoc();
+      autoRun.current = true;
+      setDocState((d) => ({ ...d, title, src }));
+    };
+    if (isDirty())
+      return setPending({
+        message: `Se reemplazarán las ecuaciones de «${doc.title}» por las del asistente («${title}»). Guarda antes si quieres conservarlas.`,
+        confirm: 'Reemplazar ecuaciones',
+        action: apply,
+      });
+    apply();
   };
   const saveFile = () => download(`${slug(doc.title)}.tsolv`, JSON.stringify(doc, null, 2), 'application/json');
   const openFile = async (f: File) => {
@@ -216,26 +258,16 @@ export function App() {
               </option>
             ))}
           </select>
-          <button
-            className="btn ghost icon"
-            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : t === 'light' ? 'auto' : 'dark'))}
-            data-tip={`Cambiar tema (ahora: ${theme === 'auto' ? 'automático' : theme === 'dark' ? 'oscuro' : 'claro'})`}
-            aria-label={`Cambiar tema (ahora: ${theme === 'auto' ? 'automático' : theme === 'dark' ? 'oscuro' : 'claro'})`}
-          >
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              {theme === 'dark' ? (
-                <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
-              ) : theme === 'light' ? (
-                <>
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-                </>
-              ) : (
-                <>
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" />
-                </>
-              )}
+          <button className="btn assist" onClick={() => setPanel('assistant')}>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+            </svg>
+            Asistente
+          </button>
+          <button className="btn ghost icon" onClick={() => setPanel('prefs')} data-tip="Abrir preferencias" aria-label="Abrir preferencias">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
             </svg>
           </button>
           <button className="btn primary" onClick={run} disabled={!ready || busy}>
@@ -282,13 +314,23 @@ export function App() {
           </button>
         </div>
       )}
+      {panel === 'assistant' && (
+        <SlideOver title="Asistente" onClose={() => setPanel(null)} wide>
+          <Assistant lang={prefs.lang} canAppend={!!doc.src.trim()} onInsert={insertFromAssistant} />
+        </SlideOver>
+      )}
+      {panel === 'prefs' && (
+        <SlideOver title="Preferencias" onClose={() => setPanel(null)}>
+          <Preferences prefs={prefs} onChange={changePrefs} />
+        </SlideOver>
+      )}
       <main className="workspace">
         <section className="pane editor-pane">
           <div className="pane-head">
             <h2>Ecuaciones</h2>
             <span className={`status ${status.cls}`}>{status.text}</span>
           </div>
-          <Editor value={doc.src} onChange={(src) => setDoc((d) => ({ ...d, src }))} onRun={() => runRef.current()} diagnostics={diagnostics} variables={varNames} handleRef={editorRef} />
+          <Editor lang={prefs.lang} value={doc.src} onChange={(src) => setDoc((d) => ({ ...d, src }))} onRun={() => runRef.current()} diagnostics={diagnostics} variables={varNames} handleRef={editorRef} />
           {(errors.length > 0 || warnings.length > 0) && (
             <ul className="diag-list" aria-live="polite">
               {[...errors, ...warnings].slice(0, 30).map((d, i) => (
@@ -335,7 +377,7 @@ export function App() {
                     </div>
                   </div>
                 )}
-                <Results vars={vars} solved={solvedNow} doc={doc} setDoc={setDoc} onRun={run} ready={ready} />
+                <Results vars={vars} solved={solvedNow} doc={doc} setDoc={setDoc} onRun={run} ready={ready} onAssistant={() => setPanel('assistant')} />
               </>
             )}
             {tab === 'table' && (
@@ -354,7 +396,7 @@ export function App() {
               />
             )}
             {tab === 'plot' && <PlotPanel doc={doc} setDoc={setDoc} vars={vars} rows={tableRows} theme={theme} onGoTable={() => setTab('table')} />}
-            {tab === 'help' && <Help />}
+            {tab === 'help' && <Help lang={prefs.lang} />}
           </div>
         </section>
       </main>

@@ -11,6 +11,7 @@ export function Results(props: {
   setDoc: (f: (d: Doc) => Doc) => void;
   onRun: () => void;
   ready: boolean;
+  onAssistant: () => void;
 }) {
   const { vars, doc, setDoc, solved } = props;
   const [advanced, setAdvanced] = useState(false);
@@ -20,10 +21,15 @@ export function Results(props: {
     return (
       <div className="empty">
         <h3>Todavía no hay resultados</h3>
-        <p>Aquí aparecerá cada variable con su valor y sus unidades. Escribe las ecuaciones a la izquierda o carga uno de los ejemplos del menú superior.</p>
-        <button className="btn primary" onClick={props.onRun} disabled={!props.ready}>
-          Resolver ecuaciones
-        </button>
+        <p>Aquí aparecerá cada variable con su valor y sus unidades. Si no sabes por dónde empezar, el asistente te pide los datos y escribe las ecuaciones por ti.</p>
+        <div className="empty-actions">
+          <button className="btn primary" onClick={props.onAssistant}>
+            Usar el asistente
+          </button>
+          <button className="btn" onClick={props.onRun} disabled={!props.ready}>
+            Resolver mis ecuaciones
+          </button>
+        </div>
         <p className="muted small">
           Atajo: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> o <kbd>F2</kbd>
         </p>
