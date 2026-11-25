@@ -11,7 +11,7 @@ beforeAll(async () => {
 const run = (src: string) => {
   const m = buildModel(src, CP);
   const r = solve(m);
-  const get = (n: string) => r.values[m.index.get(n.toLowerCase())!];
+  const get = (n: string) => r.values[m.index.get(n)!];
   return { m, r, get };
 };
 
@@ -39,10 +39,27 @@ describe('solver', () => {
     expect(x * x + (2 * x + 3) ** 2).toBeCloseTo(100, 8);
   });
 
-  it('is case-insensitive and handles explicit chains', () => {
-    const { r, get } = run('A = 2\nb = a*3\nC = B + a');
+  it('handles explicit chains', () => {
+    const { r, get } = run('A = 2\nb = A*3\nC = b + A');
     expect(r.ok).toBe(true);
-    expect(get('c')).toBe(8);
+    expect(get('C')).toBe(8);
+  });
+
+  it('treats upper and lower case as different variables', () => {
+    const { m, r, get } = run('T = 300 [K]\nt = 2 [s]\nP = 5\np = P + T/1[K]');
+    expect(r.ok).toBe(true);
+    expect(m.vars.length).toBe(4);
+    expect(get('T')).toBe(300);
+    expect(get('t')).toBe(2);
+    expect(get('p')).toBe(305);
+    expect(m.index.get('P')).not.toBe(m.index.get('p'));
+  });
+
+  it('still accepts functions, fluids and property inputs in any case', () => {
+    const { r, get } = run("T1 = 100 [C]\nP1 = 1 [atm]\nh1 = ENTHALPY(WATER, t=T1, p=P1)\nx = SQRT(4) + PI - pi");
+    expect(r.ok).toBe(true);
+    expect(get('h1')).toBeGreaterThan(4e5);
+    expect(get('x')).toBeCloseTo(2);
   });
 
   it('reports missing equations', () => {
@@ -71,7 +88,7 @@ describe('solver', () => {
 describe('unit check', () => {
   it('infers units of variables', () => {
     const { m } = run('m = 2 [kg]\nv = 3 [m/s]\nKE = 0.5*m*v^2');
-    const ke = m.vars[m.index.get('ke')!];
+    const ke = m.vars[m.index.get('KE')!];
     expect(ke.dim!.map((v) => v + 0)).toEqual([2, 1, -2, 0, 0, 0, 0]);
     expect(m.diagnostics).toHaveLength(0);
   });
@@ -153,8 +170,8 @@ describe('parametric table', () => {
     const m = buildModel('T = 100 [C]\nP = P_sat(Water, T=T)', CP);
     const rows = runTable(m, [{ name: 'T', values: linspace(373.15, 473.15, 5) }]);
     expect(rows.every((r) => r.ok)).toBe(true);
-    expect(rows[0].values.p / 1000).toBeCloseTo(101.4, 0);
-    expect(rows[4].values.p / 1e6).toBeCloseTo(1.554, 2);
+    expect(rows[0].values.P / 1000).toBeCloseTo(101.4, 0);
+    expect(rows[4].values.P / 1e6).toBeCloseTo(1.554, 2);
   });
   it('explains when an input variable is computed by the equations', () => {
     const m = buildModel('T = 2*y\ny = 3', CP);

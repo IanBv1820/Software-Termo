@@ -36,7 +36,7 @@ const toMap = (model: Model, rec: Record<string, number> | undefined) => {
   const m = new Map<number, number>();
   if (!rec) return m;
   for (const [k, v] of Object.entries(rec)) {
-    const i = model.index.get(k.toLowerCase());
+    const i = model.index.get(k);
     if (i !== undefined && Number.isFinite(v)) m.set(i, v);
   }
   return m;

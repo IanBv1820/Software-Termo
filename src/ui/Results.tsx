@@ -38,8 +38,8 @@ export function Results(props: {
   }
 
   const shown = vars
-    .map((v) => ({ ...v, key: v.name.toLowerCase() }))
-    .filter((v) => !filter || v.key.includes(filter.toLowerCase()))
+    .map((v) => ({ ...v, key: v.name }))
+    .filter((v) => !filter || v.name.toLowerCase().includes(filter.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true, sensitivity: 'base' }));
 
   const setRec = (field: 'guesses' | 'lower' | 'upper', key: string, raw: string, unit: string) => {

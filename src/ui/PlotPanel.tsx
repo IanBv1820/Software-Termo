@@ -14,11 +14,11 @@ export function PlotPanel(props: { doc: Doc; setDoc: (f: (d: Doc) => Doc) => voi
   const canvas = useRef<HTMLCanvasElement>(null);
   const chart = useRef<Chart | null>(null);
   const cols = doc.table.columns.map((c) => c.name);
-  const byKey = new Map(vars.map((v) => [v.name.toLowerCase(), v]));
-  const unitOf = (n: string) => unitFor(byKey.get(n.toLowerCase())?.dim ?? null, doc.units[n.toLowerCase()]);
+  const byKey = new Map(vars.map((v) => [v.name, v]));
+  const unitOf = (n: string) => unitFor(byKey.get(n)?.dim ?? null, doc.units[n]);
   const label = (n: string) => {
     const u = unitOf(n);
-    return `${byKey.get(n.toLowerCase())?.name ?? n}${u && u !== '-' ? ` [${u}]` : ''}`;
+    return `${byKey.get(n)?.name ?? n}${u && u !== '-' ? ` [${u}]` : ''}`;
   };
   const x = cols.includes(doc.plot.x) ? doc.plot.x : cols[0] ?? '';
   const ys = doc.plot.y.filter((y) => cols.includes(y) && y !== x);
@@ -31,7 +31,7 @@ export function PlotPanel(props: { doc: Doc; setDoc: (f: (d: Doc) => Doc) => voi
     const data = {
       datasets: ys.map((y, i) => ({
         label: label(y),
-        data: done.map((r) => ({ x: siToUnit(r.values[x.toLowerCase()], unitOf(x)), y: siToUnit(r.values[y.toLowerCase()], unitOf(y)) })),
+        data: done.map((r) => ({ x: siToUnit(r.values[x], unitOf(x)), y: siToUnit(r.values[y], unitOf(y)) })),
         borderColor: v(SERIES[i % SERIES.length]),
         backgroundColor: v(SERIES[i % SERIES.length]),
         borderWidth: 2,
@@ -107,7 +107,7 @@ export function PlotPanel(props: { doc: Doc; setDoc: (f: (d: Doc) => Doc) => voi
           <select value={x} onChange={(e) => setDoc((d) => ({ ...d, plot: { ...d.plot, x: e.target.value } }))}>
             {cols.map((c) => (
               <option key={c} value={c}>
-                {byKey.get(c.toLowerCase())?.name ?? c}
+                {byKey.get(c)?.name ?? c}
               </option>
             ))}
           </select>
@@ -125,7 +125,7 @@ export function PlotPanel(props: { doc: Doc; setDoc: (f: (d: Doc) => Doc) => voi
                     setDoc((d) => ({ ...d, plot: { ...d.plot, x, y: e.target.checked ? [...d.plot.y.filter((y) => y !== c), c] : d.plot.y.filter((y) => y !== c) } }))
                   }
                 />
-                {byKey.get(c.toLowerCase())?.name ?? c}
+                {byKey.get(c)?.name ?? c}
               </label>
             ))}
         </div>

@@ -72,8 +72,8 @@ export function App() {
       if (r.type !== 'checked') return;
       setCheckDiags(r.diagnostics);
       setVars((old) => {
-        const prev = new Map(old.map((v) => [v.name.toLowerCase(), v]));
-        return r.vars.map((v) => ({ ...v, value: prev.get(v.name.toLowerCase())?.value ?? NaN }));
+        const prev = new Map(old.map((v) => [v.name, v]));
+        return r.vars.map((v) => ({ ...v, value: prev.get(v.name)?.value ?? NaN }));
       });
     }, 350);
     return () => clearTimeout(h);
@@ -106,12 +106,12 @@ export function App() {
 
   const runTable = useCallback(async () => {
     const cols = doc.table.columns;
-    const byKey = new Map(vars.map((v) => [v.name.toLowerCase(), v]));
+    const byKey = new Map(vars.map((v) => [v.name, v]));
     const n = doc.table.rows;
     const inputs = cols
       .filter((c) => c.input && c.from !== undefined && c.to !== undefined)
       .map((c) => {
-        const unit = unitFor(byKey.get(c.name.toLowerCase())?.dim ?? null, doc.units[c.name.toLowerCase()]);
+        const unit = unitFor(byKey.get(c.name)?.dim ?? null, doc.units[c.name]);
         return { name: c.name, values: linspace(c.from!, c.to!, n).map((v) => unitToSi(v, unit)) };
       });
     setTableRows(new Array(n).fill(null));
@@ -129,10 +129,10 @@ export function App() {
 
   const exportCsv = () => {
     const cols = doc.table.columns;
-    const byKey = new Map(vars.map((v) => [v.name.toLowerCase(), v]));
-    const units = cols.map((c) => unitFor(byKey.get(c.name.toLowerCase())?.dim ?? null, doc.units[c.name.toLowerCase()]));
-    const head = cols.map((c, i) => `${byKey.get(c.name.toLowerCase())?.name ?? c.name}${units[i] ? ` [${units[i]}]` : ''}`);
-    const lines = tableRows.map((r) => cols.map((c, i) => (r ? String(siToUnit(r.values[c.name.toLowerCase()], units[i])) : '')).join(','));
+    const byKey = new Map(vars.map((v) => [v.name, v]));
+    const units = cols.map((c) => unitFor(byKey.get(c.name)?.dim ?? null, doc.units[c.name]));
+    const head = cols.map((c, i) => `${byKey.get(c.name)?.name ?? c.name}${units[i] ? ` [${units[i]}]` : ''}`);
+    const lines = tableRows.map((r) => cols.map((c, i) => (r ? String(siToUnit(r.values[c.name], units[i])) : '')).join(','));
     download(`${slug(doc.title)}-tabla.csv`, [head.join(','), ...lines].join('\n'), 'text/csv');
   };
 

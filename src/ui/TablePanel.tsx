@@ -15,9 +15,9 @@ export function TablePanel(props: {
 }) {
   const { doc, setDoc, vars, rows, running } = props;
   const cols = doc.table.columns;
-  const byKey = new Map(vars.map((v) => [v.name.toLowerCase(), v]));
-  const available = vars.filter((v) => !cols.some((c) => c.name.toLowerCase() === v.name.toLowerCase()));
-  const unitOf = (name: string) => unitFor(byKey.get(name.toLowerCase())?.dim ?? null, doc.units[name.toLowerCase()]);
+  const byKey = new Map(vars.map((v) => [v.name, v]));
+  const available = vars.filter((v) => !cols.some((c) => c.name === v.name));
+  const unitOf = (name: string) => unitFor(byKey.get(name)?.dim ?? null, doc.units[name]);
 
   const setCols = (f: (c: TableCol[]) => TableCol[]) => setDoc((d) => ({ ...d, table: { ...d.table, columns: f(d.table.columns) } }));
   const update = (i: number, patch: Partial<TableCol>) => setCols((c) => c.map((col, j) => (j === i ? { ...col, ...patch } : col)));
@@ -40,10 +40,10 @@ export function TablePanel(props: {
         <div className="cols">
           {cols.map((c, i) => {
             const unit = unitOf(c.name);
-            const exists = byKey.has(c.name.toLowerCase());
+            const exists = byKey.has(c.name);
             return (
               <div className={`col-row ${exists ? '' : 'missing'}`} key={c.name + i}>
-                <span className="var">{byKey.get(c.name.toLowerCase())?.name ?? c.name}</span>
+                <span className="var">{byKey.get(c.name)?.name ?? c.name}</span>
                 <div className="seg" role="group" aria-label={`Tipo de columna ${c.name}`}>
                   <button className={c.input ? 'on' : ''} onClick={() => update(i, { input: true })}>
                     Entrada
@@ -122,7 +122,7 @@ export function TablePanel(props: {
                   <th className="num">#</th>
                   {cols.map((c) => (
                     <th key={c.name} className={`num ${c.input ? 'in-col' : ''}`}>
-                      {byKey.get(c.name.toLowerCase())?.name ?? c.name}
+                      {byKey.get(c.name)?.name ?? c.name}
                       <div className="unit">{unitOf(c.name) || '-'}</div>
                     </th>
                   ))}
@@ -134,7 +134,7 @@ export function TablePanel(props: {
                     <td className="num muted">{i + 1}</td>
                     {cols.map((c) => (
                       <td key={c.name} className="num">
-                        {r ? fmt(siToUnit(r.values[c.name.toLowerCase()], unitOf(c.name))) : <span className="muted">…</span>}
+                        {r ? fmt(siToUnit(r.values[c.name], unitOf(c.name))) : <span className="muted">…</span>}
                       </td>
                     ))}
                   </tr>
