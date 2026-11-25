@@ -319,6 +319,95 @@ h3 {
   height: 100%;
 }
 
+/* Function argument box: in the autocompletion side panel and above the cursor while typing a call */
+.editor .cm-tooltip.cm-completionInfo {
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(16, 24, 40, 0.12);
+  max-width: 360px;
+}
+.editor .cm-tooltip:has(> .sig-tooltip) {
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(16, 24, 40, 0.12);
+}
+.sig-tooltip {
+  max-width: min(420px, calc(100vw - 32px));
+}
+.sig {
+  padding: 8px 12px;
+  font-family: var(--font);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.sig-line {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+.sig-name {
+  color: var(--syn-func);
+  font-weight: 600;
+}
+.sig-param {
+  color: var(--text-2);
+}
+.sig-param.active {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sig-desc {
+  margin-top: 2px;
+}
+.sig-head {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sig-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 16px;
+  margin-top: 4px;
+}
+.sig-input {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.sig-input code,
+.sig-example code {
+  font-family: var(--mono);
+  color: var(--accent);
+}
+.sig-input code {
+  min-width: 28px;
+}
+.sig-note {
+  margin-top: 8px;
+}
+.sig-example {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sig-example .sig-head {
+  margin-top: 0;
+}
+.sig-alias {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--text-3);
+}
+
 .status {
   font-size: 12px;
   padding: 2px 12px;
