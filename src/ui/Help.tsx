@@ -90,6 +90,9 @@ P_s = P_sat(Water, T=100 [C])`)}
           Las propiedades específicas usan la primera letra + <code>_esp</code>: <code>h_esp</code> (entalpía), <code>s_esp</code> (entropía), <code>u_esp</code> (energía interna) y{' '}
           <code>v_esp</code> (volumen específico). Los nombres largos (<code>entalpia</code>, <code>entropia</code>, <code>energia_interna</code>, <code>volumen</code>) siguen funcionando.
         </p>
+        <p>
+          Al escribir en el editor puedes buscar una función por su nombre o por la propiedad en palabras (por ejemplo <code>ent</code> o <code>volumen</code>). Dentro de los paréntesis aparece un recuadro con los argumentos que lleva la función y las entradas que puedes usar.
+        </p>
       </section>
 
       <section className="card">
