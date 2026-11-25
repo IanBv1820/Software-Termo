@@ -13,7 +13,7 @@ export function Preferences(props: { prefs: Prefs; onChange: (p: Prefs) => void 
         <label>
           <input type="radio" name="pref-lang" checked={prefs.lang === 'es'} onChange={() => onChange({ ...prefs, lang: 'es' })} data-autofocus />
           <span>
-            Español <code>entalpia(Agua, T=T1, P=P1)</code>
+            Español <code>h_esp(Agua, T=T1, P=P1)</code>
           </span>
         </label>
         <label>

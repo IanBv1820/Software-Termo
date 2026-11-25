@@ -195,6 +195,12 @@ export type Lang = 'es' | 'en';
 
 /** Spanish function name -> canonical (English, lower-case) name */
 export const FUNC_ES: Record<string, string> = {
+  // Propiedades específicas: primera letra + _esp (nombres principales en español)
+  h_esp: 'enthalpy',
+  s_esp: 'entropy',
+  u_esp: 'intenergy',
+  v_esp: 'volume',
+  // Nombres largos: se siguen aceptando para no romper proyectos guardados
   entalpia: 'enthalpy',
   entropia: 'entropy',
   energia_interna: 'intenergy',
@@ -221,11 +227,11 @@ export const FUNC_ES: Record<string, string> = {
   asen: 'asin',
   senh: 'sinh',
 };
-const FUNC_EN_TO_ES: Record<string, string> = Object.fromEntries(
-  Object.entries(FUNC_ES)
-    .filter(([es, en]) => es !== en)
-    .map(([es, en]) => [en, es]),
-);
+/** Canonical name -> preferred Spanish name (the first Spanish name listed for it wins). */
+const FUNC_EN_TO_ES: Record<string, string> = {};
+for (const [es, en] of Object.entries(FUNC_ES)) {
+  if (es !== en && !(en in FUNC_EN_TO_ES)) FUNC_EN_TO_ES[en] = es;
+}
 
 const EN_PRETTY: Record<string, string> = {
   enthalpy_ha: 'Enthalpy_HA',

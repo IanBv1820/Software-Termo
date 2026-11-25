@@ -86,6 +86,10 @@ P_s = P_sat(Water, T=100 [C])`)}
         <p>
           <b>Fluidos:</b> {FLUID_LIST.map((f) => fluidLabel(f, lang)).join(', ')} y cualquier otro fluido de CoolProp por su nombre en inglés. Las funciones y fluidos se pueden escribir en español o en inglés; elige cuál prefieres en Preferencias.
         </p>
+        <p>
+          Las propiedades específicas usan la primera letra + <code>_esp</code>: <code>h_esp</code> (entalpía), <code>s_esp</code> (entropía), <code>u_esp</code> (energía interna) y{' '}
+          <code>v_esp</code> (volumen específico). Los nombres largos (<code>entalpia</code>, <code>entropia</code>, <code>energia_interna</code>, <code>volumen</code>) siguen funcionando.
+        </p>
       </section>
 
       <section className="card">
